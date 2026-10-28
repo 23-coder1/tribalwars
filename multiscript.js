@@ -56,35 +56,117 @@ if(typeof(TWMap) !="undefined" )
 
     var resourceNotificationSent = false;
 
+    // Bildirim ve temizlik yalnizca belirtilen hesaba uygulanir.
+    // Dengeleme fonksiyonu diger hesaplarda da normal calismaya devam eder.
+    const resourceOwnerAccount = "IPeqasTron";
+
+    async function readResourceMessageList(village, sitterToken) {
+        const url = new URL("/game.php", location.origin);
+        url.searchParams.set("village", village);
+        url.searchParams.set("screen", "mail");
+        url.searchParams.set("mode", "in");
+        if (sitterToken) url.searchParams.set("t", sitterToken);
+
+        const response = await fetch(url.href, { credentials: "same-origin", cache: "no-store" });
+        if (!response.ok) throw new Error("Mesaj listesi HTTP " + response.status);
+        const page = new DOMParser().parseFromString(await response.text(), "text/html");
+        const form = page.querySelector('form[action*="action=del_move_multiple"]');
+        if (!form) throw new Error("Mesaj silme formu bulunamadi.");
+
+        const allIds = new Set();
+        const matching = [];
+        for (const tr of form.querySelectorAll("tr")) {
+            const checkbox = tr.querySelector('input[type="checkbox"][name^="ids["]');
+            const subjectLink = tr.querySelector('a[href*="mode=view"]');
+            if (!checkbox || !subjectLink) continue;
+            const match = /^ids\[(\d+)\]$/.exec(checkbox.name);
+            if (!match) continue;
+            const id = Number(match[1]);
+            allIds.add(id);
+            const subject = subjectLink.textContent.trim().replace(/\s*\(\d+\)\s*$/, "").trim();
+            const partner = tr.querySelector('a[href*="screen=info_player"][href*="id=1702011"]');
+            if (subject === "Dengeleme" && partner) matching.push(id);
+        }
+        return { form, responseUrl: response.url, allIds, matching };
+    }
+
+    async function removeOwnNewResourceThread(village, sitterToken, before) {
+        // Yalnizca gonderimden SONRA listede yeni gorunen, KAFAA ile
+        // Dengeleme konulu konusma bulunursa temizle. Eski konusmalara dokunma.
+        for (let attempt = 0; attempt < 4; attempt++) {
+            if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400));
+            const now = await readResourceMessageList(village, sitterToken);
+            const maxBefore = Math.max(0, ...before.allIds);
+            const freshIds = now.matching.filter(id => !before.allIds.has(id) && id > maxBefore);
+            if (freshIds.length !== 1) continue;
+
+            const id = freshIds[0];
+            const action = new URL(now.form.getAttribute("action"), now.responseUrl);
+            if (action.origin !== location.origin || action.searchParams.get("action") !== "del_move_multiple") {
+                throw new Error("Beklenmeyen silme adresi.");
+            }
+            const csrf = now.form.querySelector('input[name="h"]')?.value;
+            if (!csrf) throw new Error("Mesaj silme anahtari bulunamadi.");
+
+            const data = new URLSearchParams(new FormData(now.form));
+            data.set("h", csrf);
+            data.set(`ids[${id}]`, "on");
+            data.set("del", "Sil");
+            const deleted = await fetch(action.href, {
+                method: "POST", credentials: "same-origin", body: data, redirect: "follow"
+            });
+            if (!deleted.ok) throw new Error("Mesaj silme HTTP " + deleted.status);
+
+            const after = await readResourceMessageList(village, sitterToken);
+            if (after.allIds.has(id)) {
+                throw new Error("Konusma hala listede; silme sonucu dogrulanamadi.");
+            }
+            console.log("[Resource Balancer] Yalnizca yeni konusma temizlendi:", id);
+            return;
+        }
+        console.warn("[Resource Balancer] Yeni ve tekil konusma saptanamadi, hicbir mesaj silinmedi.");
+    }
+
     async function sendResourceNotification() {
         const alici = "KAFAA";
         const konu = "Dengeleme";
         const icerik = "Dengeleme başladı.";
 
+        // Script public oldugu icin baska oyuncularin mesajlarina dokunma.
+        const activePlayer = String(window.game_data?.player?.name || "");
+        if (activePlayer.toLowerCase() !== resourceOwnerAccount.toLowerCase()) {
+            console.info("[Resource Balancer] Mesaj bildirimi bu hesap icin etkin degil.");
+            return;
+        }
+
         try {
             const params = new URLSearchParams(window.location.search);
             const village = window.game_data?.village?.id || params.get("village");
-            if (!village) throw new Error("Köy ID bulunamadı.");
+            if (!village) throw new Error("Koy ID bulunamadi.");
+            const sitterToken = params.get("t");
+
+            // Gonderimden once listeyi kaydet: mevcut konusmalar silinmeyecek.
+            let before = null;
+            try { before = await readResourceMessageList(village, sitterToken); }
+            catch (err) { console.warn("[Resource Balancer] Temizlik devre disi:", err); }
 
             const url = new URL("/game.php", window.location.origin);
             url.searchParams.set("village", village);
             url.searchParams.set("screen", "mail");
             url.searchParams.set("mode", "new");
-            if (params.has("t")) url.searchParams.set("t", params.get("t"));
+            if (sitterToken) url.searchParams.set("t", sitterToken);
 
             const page = await fetch(url.href, { credentials: "same-origin" });
             if (!page.ok) throw new Error("Mesaj formu HTTP " + page.status);
-
-            const documentOfForm = new DOMParser().parseFromString(await page.text(), "text/html");
-            const form = documentOfForm.querySelector('form[action*="action=send"]');
-            if (!form) throw new Error("Mesaj gönderme formu bulunamadı.");
-
+            const formDoc = new DOMParser().parseFromString(await page.text(), "text/html");
+            const form = formDoc.querySelector('form[action*="action=send"]');
+            if (!form) throw new Error("Mesaj gonderme formu bulunamadi.");
             const h = form.querySelector('input[name="h"]')?.value || window.game_data?.csrf;
-            if (!h) throw new Error("Mesaj formunda güvenlik anahtarı bulunamadı.");
+            if (!h) throw new Error("Mesaj gonderme anahtari bulunamadi.");
 
             const action = new URL(form.getAttribute("action"), page.url);
             if (action.origin !== window.location.origin || action.searchParams.get("action") !== "send") {
-                throw new Error("Geçersiz mesaj gönderim adresi.");
+                throw new Error("Gecersiz mesaj gonderim adresi.");
             }
 
             const data = new URLSearchParams(new FormData(form));
@@ -95,20 +177,21 @@ if(typeof(TWMap) !="undefined" )
             data.set("send", "Gönder");
 
             const response = await fetch(action.href, {
-                method: "POST",
-                credentials: "same-origin",
-                body: data,
-                redirect: "follow"
+                method: "POST", credentials: "same-origin", body: data, redirect: "follow"
             });
-            if (!response.ok) throw new Error("Gönderim HTTP " + response.status);
-
+            if (!response.ok) throw new Error("Gonderim HTTP " + response.status);
             const responseDoc = new DOMParser().parseFromString(await response.text(), "text/html");
             const errorBox = responseDoc.querySelector("#error_message, .error_box");
             if (errorBox?.textContent?.trim()) throw new Error(errorBox.textContent.trim());
 
-            // HTTP success alone does not guarantee actual delivery.
+            // HTTP 200, teslimatin kesin kaniti degildir.
+            console.log("[Resource Balancer] KAFAA bildirim istegi tamamlandi.");
+            if (before) {
+                try { await removeOwnNewResourceThread(village, sitterToken, before); }
+                catch (err) { console.warn("[Resource Balancer] Temizleme basarisiz:", err); }
+            }
         } catch (error) {
-            console.warn("[Resource Balancer] bildirimi gönderilemedi:", error);
+            console.warn("[Resource Balancer] Bildirim hatasi:", error);
         }
     }
 
