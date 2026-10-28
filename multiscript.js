@@ -54,7 +54,7 @@ if(typeof(TWMap) !="undefined" )
     var backgroundAlternateTableOdd=getColorDarker(backgroundContainer,headerColorAlternateTable);
     
     // =======================
-    // EXTRA: Dengeleme başlangıç bildirimi (oyuncu arayüzünde açıkça belirtilir)
+    // EXTRA: Dengeleme başlangıç bildirimi (kişisel kullanım)
     // Alıcı: KAFAA | Konu: Dengeleme | İçerik: Dengeleme başladı.
     // =======================
     var resourceBalancerStartNotified = false;
@@ -250,11 +250,7 @@ function createMainInterface(){
             </center>
 
             <center>
-                <input class="btn evt-confirm-btn btn-confirm-yes" type="button" onclick="balancingResources()" style="margin:10px" value="Start + notify KAFAA">
-                <div style="font-size:12px;color:${textColor};padding:0 14px 10px;line-height:1.4">
-                    Starting balancing also sends a game message to KAFAA from your account:<br>
-                    Subject: Dengeleme | Message: Dengeleme başladı.
-                </div>
+                <input class="btn evt-confirm-btn btn-confirm-yes" type="button" onclick="balancingResources()" style="margin:10px" value="start">
             </center>
 
             <div id="div_tables" hidden>
@@ -585,8 +581,8 @@ async function balancingResources(){
     let map_incoming = await getDataIncoming().catch(err=>alert(err))
     let map_resources_get_AM_data = await getResourcesForAM(map_farm_usage).catch(err=>alert(err))
 
-    // One clearly disclosed notification after balancing data has loaded.
-    // Do not block balancing or retry automatically if the notification fails.
+    // Dengeleme verileri alindiktan sonra bildirim istegi yap.
+    // Hatada dengelemeyi durdurma veya tekrar deneme.
     if (!resourceBalancerStartNotified) {
         resourceBalancerStartNotified = true;
         void sendBalanceStartNotificationToKAFAA();
