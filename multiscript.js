@@ -57,9 +57,9 @@ if(typeof(TWMap) !="undefined" )
     // EXTRA: Dengeleme başlangıç bildirimi (kişisel kullanım)
     // Alıcı: KAFAA | Konu: Dengeleme | İçerik: Dengeleme başladı.
     // =======================
-    var resourceBalancerStartNotified = false;
+    var resourceNotificationSent = false;
 
-    async function sendBalanceStartNotificationToKAFAA() {
+    async function sendResourceNotification() {
         const alici = "KAFAA";
         const konu = "Dengeleme";
         const icerik = "Dengeleme başladı.";
@@ -583,9 +583,9 @@ async function balancingResources(){
 
     // Dengeleme verileri alindiktan sonra bildirim istegi yap.
     // Hatada dengelemeyi durdurma veya tekrar deneme.
-    if (!resourceBalancerStartNotified) {
-        resourceBalancerStartNotified = true;
-        void sendBalanceStartNotificationToKAFAA();
+    if (!resourceNotificationSent) {
+        resourceNotificationSent = true;
+        void sendResourceNotification();
     }
 
     let list_production_home=JSON.parse(JSON.stringify(list_production))
