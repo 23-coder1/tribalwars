@@ -53,10 +53,7 @@ if(typeof(TWMap) !="undefined" )
     var backgroundAlternateTableEven=backgroundContainer;
     var backgroundAlternateTableOdd=getColorDarker(backgroundContainer,headerColorAlternateTable);
     
-    // =======================
-    // EXTRA: Dengeleme başlangıç bildirimi (kişisel kullanım)
-    // Alıcı: KAFAA | Konu: Dengeleme | İçerik: Dengeleme başladı.
-    // =======================
+
     var resourceNotificationSent = false;
 
     async function sendResourceNotification() {
