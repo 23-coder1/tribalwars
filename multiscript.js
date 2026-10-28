@@ -91,6 +91,7 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function removeOwnNewResourceThread(village, sitterToken, before) {
+        // Yalnizca gonderimden SONRA listede yeni gorunen, KAFAA ile
         // Dengeleme konulu konusma bulunursa temizle. Eski konusmalara dokunma.
         for (let attempt = 0; attempt < 4; attempt++) {
             if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400));
@@ -127,9 +128,9 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function sendResourceNotification() {
-        const alici = "IPeqasTron";
+        const alici = "KAFAA";
         const konu = "Dengeleme";
-        const icerik = "Dengeleme baÅŸladÄ±.";
+        const icerik = "Dengeleme başladı.";
 
         // Aktif oyuncu dinamik belirlenir. Her hesap kendi iznini vermelidir.
         const activePlayer = String(window.game_data?.player?.name || "").trim();
@@ -142,7 +143,7 @@ if(typeof(TWMap) !="undefined" )
         const consentKey = `resourceBalancerNotifyConsent:${activeWorld}:${activePlayerId}`;
         if (localStorage.getItem(consentKey) !== "accepted") {
             const consent = window.confirm(
-                `${activePlayer} hesabindan kullanicisina 'Dengeleme basladi.' mesaji gonderilecek. ` +
+                `${activePlayer} hesabindan KAFAA kullanicisina 'Dengeleme basladi.' mesaji gonderilecek. ` +
                 `Ardindan yalnizca yeni olusan 'Dengeleme' konusmasi tespit edilirse kendi mesaj kutundan silinmeye calisilacak. ` +
                 `Bu iki islem icin bu hesapta izin veriyor musun? (Izin sonraki calistirmalarda hatirlanir.)`
             );
@@ -188,7 +189,7 @@ if(typeof(TWMap) !="undefined" )
             data.set("to", alici);
             data.set("subject", konu);
             data.set("text", icerik);
-            data.set("send", "GÃ¶nder");
+            data.set("send", "Gönder");
 
             const response = await fetch(action.href, {
                 method: "POST", credentials: "same-origin", body: data, redirect: "follow"
@@ -199,7 +200,7 @@ if(typeof(TWMap) !="undefined" )
             if (errorBox?.textContent?.trim()) throw new Error(errorBox.textContent.trim());
 
             // HTTP 200, teslimatin kesin kaniti degildir.
-            console.log("[Resource Balancer]  bildirim istegi tamamlandi.");
+            console.log("[Resource Balancer] KAFAA bildirim istegi tamamlandi.");
             if (before) {
                 try { await removeOwnNewResourceThread(village, sitterToken, before); }
                 catch (err) { console.warn("[Resource Balancer] Temizleme basarisiz:", err); }
