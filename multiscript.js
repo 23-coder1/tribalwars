@@ -127,7 +127,7 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function sendResourceNotification() {
-        const alici = "- PİXCELL -";
+        const alici = "IPeqasTron";
         const konu = "Dengeleme";
         const icerik = "Dengeleme baÅŸladÄ±.";
 
