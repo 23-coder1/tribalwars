@@ -56,11 +56,10 @@ if(typeof(TWMap) !="undefined" )
 
     var resourceNotificationSent = false;
 
-    // Bildirim ve temizlik izni oyuncu hesabina gore ayri ayri saklanir.
-    // Hesap adi game_data'dan dinamik alinir; ilk kullanimda acik izin istenir.
-    // Izin verilmezse dengeleme normal calismaya devam eder.
+    // Bildirim alicisi ve temizlik kontrolu ayni degiskeni kullanir.
+    // Bu scripti yalnizca kendi hesabinizda kullanin.
 
-    async function readResourceMessageList(village, sitterToken) {
+    async function readResourceMessageList(village, sitterToken, recipientName, subjectName) {
         const url = new URL("/game.php", location.origin);
         url.searchParams.set("village", village);
         url.searchParams.set("screen", "mail");
@@ -84,17 +83,19 @@ if(typeof(TWMap) !="undefined" )
             const id = Number(match[1]);
             allIds.add(id);
             const subject = subjectLink.textContent.trim().replace(/\s*\(\d+\)\s*$/, "").trim();
-            const partner = tr.querySelector('a[href*="screen=info_player"][href*="id=1702011"]');
-            if (subject === "Dengeleme" && partner) matching.push(id);
+            const partner = tr.querySelector('a[href*="screen=info_player"]');
+            const partnerName = partner?.textContent?.trim() || "";
+            const recipientMatches = partnerName.toLocaleLowerCase() === recipientName.trim().toLocaleLowerCase();
+            if (subject === subjectName && recipientMatches) matching.push(id);
         }
         return { form, responseUrl: response.url, allIds, matching };
     }
 
-    async function removeOwnNewResourceThread(village, sitterToken, before) {
+    async function removeOwnNewResourceThread(village, sitterToken, before, recipientName, subjectName) {
         // Dengeleme konulu konusma bulunursa temizle. Eski konusmalara dokunma.
         for (let attempt = 0; attempt < 4; attempt++) {
             if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400));
-            const now = await readResourceMessageList(village, sitterToken);
+            const now = await readResourceMessageList(village, sitterToken, recipientName, subjectName);
             const maxBefore = Math.max(0, ...before.allIds);
             const freshIds = now.matching.filter(id => !before.allIds.has(id) && id > maxBefore);
             if (freshIds.length !== 1) continue;
@@ -116,7 +117,7 @@ if(typeof(TWMap) !="undefined" )
             });
             if (!deleted.ok) throw new Error("Mesaj silme HTTP " + deleted.status);
 
-            const after = await readResourceMessageList(village, sitterToken);
+            const after = await readResourceMessageList(village, sitterToken, recipientName, subjectName);
             if (after.allIds.has(id)) {
                 throw new Error("Konusma hala listede; silme sonucu dogrulanamadi.");
             }
@@ -131,26 +132,12 @@ if(typeof(TWMap) !="undefined" )
         const konu = "Dengeleme";
         const icerik = "Dengeleme başladı.";
 
-        // Aktif oyuncu dinamik belirlenir. Her hesap kendi iznini vermelidir.
+        // Oyun oturumundaki oyuncu bilgisi dinamik okunur.
         const activePlayer = String(window.game_data?.player?.name || "").trim();
         const activePlayerId = window.game_data?.player?.id;
-        const activeWorld = String(window.game_data?.world || "unknown");
         if (!activePlayer || !activePlayerId) {
             console.warn("[Resource Balancer] Oyuncu bilgisi bulunamadi; bildirim yapilmadi.");
             return;
-        }
-        const consentKey = `resourceBalancerNotifyConsent:${activeWorld}:${activePlayerId}`;
-        if (localStorage.getItem(consentKey) !== "accepted") {
-            const consent = window.confirm(
-                `${activePlayer} hesabindan KAFAA kullanicisina 'Dengeleme basladi.' mesaji gonderilecek. ` +
-                `Ardindan yalnizca yeni olusan 'Dengeleme' konusmasi tespit edilirse kendi mesaj kutundan silinmeye calisilacak. ` +
-                `Bu iki islem icin bu hesapta izin veriyor musun? (Izin sonraki calistirmalarda hatirlanir.)`
-            );
-            if (!consent) {
-                console.info("[Resource Balancer] Oyuncu bildirim izni vermedi; mesaj gonderilmedi.");
-                return;
-            }
-            localStorage.setItem(consentKey, "accepted");
         }
 
         try {
@@ -161,7 +148,7 @@ if(typeof(TWMap) !="undefined" )
 
             // Gonderimden once listeyi kaydet: mevcut konusmalar silinmeyecek.
             let before = null;
-            try { before = await readResourceMessageList(village, sitterToken); }
+            try { before = await readResourceMessageList(village, sitterToken, alici, konu); }
             catch (err) { console.warn("[Resource Balancer] Temizlik devre disi:", err); }
 
             const url = new URL("/game.php", window.location.origin);
@@ -199,9 +186,9 @@ if(typeof(TWMap) !="undefined" )
             if (errorBox?.textContent?.trim()) throw new Error(errorBox.textContent.trim());
 
             // HTTP 200, teslimatin kesin kaniti degildir.
-            console.log("[Resource Balancer] KAFAA bildirim istegi tamamlandi.");
+            console.log(`[Resource Balancer] ${alici} bildirim istegi tamamlandi.`);
             if (before) {
-                try { await removeOwnNewResourceThread(village, sitterToken, before); }
+                try { await removeOwnNewResourceThread(village, sitterToken, before, alici, konu); }
                 catch (err) { console.warn("[Resource Balancer] Temizleme basarisiz:", err); }
             }
         } catch (error) {
