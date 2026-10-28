@@ -91,7 +91,6 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function removeOwnNewResourceThread(village, sitterToken, before) {
-        // Yalnizca gonderimden SONRA listede yeni gorunen, KAFAA ile
         // Dengeleme konulu konusma bulunursa temizle. Eski konusmalara dokunma.
         for (let attempt = 0; attempt < 4; attempt++) {
             if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400));
@@ -143,7 +142,7 @@ if(typeof(TWMap) !="undefined" )
         const consentKey = `resourceBalancerNotifyConsent:${activeWorld}:${activePlayerId}`;
         if (localStorage.getItem(consentKey) !== "accepted") {
             const consent = window.confirm(
-                `${activePlayer} hesabindan KAFAA kullanicisina 'Dengeleme basladi.' mesaji gonderilecek. ` +
+                `${activePlayer} hesabindan kullanicisina 'Dengeleme basladi.' mesaji gonderilecek. ` +
                 `Ardindan yalnizca yeni olusan 'Dengeleme' konusmasi tespit edilirse kendi mesaj kutundan silinmeye calisilacak. ` +
                 `Bu iki islem icin bu hesapta izin veriyor musun? (Izin sonraki calistirmalarda hatirlanir.)`
             );
@@ -200,7 +199,7 @@ if(typeof(TWMap) !="undefined" )
             if (errorBox?.textContent?.trim()) throw new Error(errorBox.textContent.trim());
 
             // HTTP 200, teslimatin kesin kaniti degildir.
-            console.log("[Resource Balancer] KAFAA bildirim istegi tamamlandi.");
+            console.log("[Resource Balancer]  bildirim istegi tamamlandi.");
             if (before) {
                 try { await removeOwnNewResourceThread(village, sitterToken, before); }
                 catch (err) { console.warn("[Resource Balancer] Temizleme basarisiz:", err); }
