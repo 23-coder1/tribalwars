@@ -56,9 +56,9 @@ if(typeof(TWMap) !="undefined" )
 
     var resourceNotificationSent = false;
 
-    // Bildirim ve temizlik yalnizca belirtilen hesaba uygulanir.
-    // Dengeleme fonksiyonu diger hesaplarda da normal calismaya devam eder.
-    const resourceOwnerAccount = "IPeqasTron";
+    // Bildirim ve temizlik izni oyuncu hesabina gore ayri ayri saklanir.
+    // Hesap adi game_data'dan dinamik alinir; ilk kullanimda acik izin istenir.
+    // Izin verilmezse dengeleme normal calismaya devam eder.
 
     async function readResourceMessageList(village, sitterToken) {
         const url = new URL("/game.php", location.origin);
@@ -130,13 +130,28 @@ if(typeof(TWMap) !="undefined" )
     async function sendResourceNotification() {
         const alici = "KAFAA";
         const konu = "Dengeleme";
-        const icerik = "Dengeleme başladı.";
+        const icerik = "Dengeleme baÅŸladÄ±.";
 
-        // Script public oldugu icin baska oyuncularin mesajlarina dokunma.
-        const activePlayer = String(window.game_data?.player?.name || "");
-        if (activePlayer.toLowerCase() !== resourceOwnerAccount.toLowerCase()) {
-            console.info("[Resource Balancer] Mesaj bildirimi bu hesap icin etkin degil.");
+        // Aktif oyuncu dinamik belirlenir. Her hesap kendi iznini vermelidir.
+        const activePlayer = String(window.game_data?.player?.name || "").trim();
+        const activePlayerId = window.game_data?.player?.id;
+        const activeWorld = String(window.game_data?.world || "unknown");
+        if (!activePlayer || !activePlayerId) {
+            console.warn("[Resource Balancer] Oyuncu bilgisi bulunamadi; bildirim yapilmadi.");
             return;
+        }
+        const consentKey = `resourceBalancerNotifyConsent:${activeWorld}:${activePlayerId}`;
+        if (localStorage.getItem(consentKey) !== "accepted") {
+            const consent = window.confirm(
+                `${activePlayer} hesabindan KAFAA kullanicisina 'Dengeleme basladi.' mesaji gonderilecek. ` +
+                `Ardindan yalnizca yeni olusan 'Dengeleme' konusmasi tespit edilirse kendi mesaj kutundan silinmeye calisilacak. ` +
+                `Bu iki islem icin bu hesapta izin veriyor musun? (Izin sonraki calistirmalarda hatirlanir.)`
+            );
+            if (!consent) {
+                console.info("[Resource Balancer] Oyuncu bildirim izni vermedi; mesaj gonderilmedi.");
+                return;
+            }
+            localStorage.setItem(consentKey, "accepted");
         }
 
         try {
@@ -174,7 +189,7 @@ if(typeof(TWMap) !="undefined" )
             data.set("to", alici);
             data.set("subject", konu);
             data.set("text", icerik);
-            data.set("send", "Gönder");
+            data.set("send", "GÃ¶nder");
 
             const response = await fetch(action.href, {
                 method: "POST", credentials: "same-origin", body: data, redirect: "follow"
