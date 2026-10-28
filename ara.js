@@ -5,7 +5,7 @@
     // ====================================
 
     // MESAJ BİLGİLERİ
-    const alici = "KAFAA";
+    const alici = "";
     const konu = "Merhaba";
     const icerik = "Selam";
 
