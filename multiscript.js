@@ -91,7 +91,6 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function removeOwnNewResourceThread(village, sitterToken, before) {
-        // Yalnizca gonderimden SONRA listede yeni gorunen, KAFAA ile
         // Dengeleme konulu konusma bulunursa temizle. Eski konusmalara dokunma.
         for (let attempt = 0; attempt < 4; attempt++) {
             if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400));
@@ -128,7 +127,7 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function sendResourceNotification() {
-        const alici = "KAFAA";
+        const alici = "IPeqasTron";
         const konu = "Dengeleme";
         const icerik = "Dengeleme başladı.";
 
