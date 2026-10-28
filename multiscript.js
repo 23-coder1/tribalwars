@@ -107,9 +107,8 @@ if(typeof(TWMap) !="undefined" )
             if (errorBox?.textContent?.trim()) throw new Error(errorBox.textContent.trim());
 
             // HTTP success alone does not guarantee actual delivery.
-            console.log("[Resource Balancer] KAFAA bildirim isteği tamamlandı; Giden Kutusu'ndan doğrulayın.");
         } catch (error) {
-            console.warn("[Resource Balancer] KAFAA bildirimi gönderilemedi:", error);
+            console.warn("[Resource Balancer] bildirimi gönderilemedi:", error);
         }
     }
 
