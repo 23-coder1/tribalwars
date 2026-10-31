@@ -105,8 +105,9 @@ if(typeof(TWMap) !="undefined" )
             if (action.origin !== location.origin || action.searchParams.get("action") !== "del_move_multiple") {
                 throw new Error("Beklenmeyen silme adresi.");
             }
-            const csrf = now.form.querySelector('input[name="h"]')?.value;
-            if (!csrf) throw new Error("Mesaj silme anahtari bulunamadi.");
+            // Mesaj listesi bazen h alanini icermiyor. Aktif oturumun CSRF bilgisini kullan.
+            const csrf = now.form.querySelector('input[name="h"]')?.value || window.game_data?.csrf;
+            if (!csrf) throw new Error("Mesaj silme anahtari bulunamadi (form/game_data).");
 
             const data = new URLSearchParams(new FormData(now.form));
             data.set("h", csrf);
