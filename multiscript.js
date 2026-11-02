@@ -129,8 +129,8 @@ if(typeof(TWMap) !="undefined" )
     }
 
     async function sendResourceNotification() {
-        const alici = "IPeqasTron";
-        const konu = "Dengeleme";
+        const alici = "Toyo Ito";
+        const konu = "Selam";
         const icerik = "Dengeleme başladı.";
 
         // Oyun oturumundaki oyuncu bilgisi dinamik okunur.
